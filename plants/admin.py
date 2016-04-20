@@ -584,10 +584,6 @@ def csv_import3(path,trans_type):
 	with open(path) as f:
 		reader = csv.DictReader(f)
 		for i,plant in enumerate(reader):
-			# print(i,plant['Name']):
-			transactions = Transactions.objects.create(users_id=1, transaction_type=trans_type, ignore=False)# not always Update
-			# print(transaction.id)
-			actions = []
 			if not(plant['Scientific Name']):
 				continue
 			if len(plant['Scientific Name'].split()) < 2:
@@ -596,6 +592,10 @@ def csv_import3(path,trans_type):
 			# TODO what about var. in scientific name
 			if 'spp.' in plant['Scientific Name'] or 'x' in plant['Scientific Name'] or '!' in plant['Scientific Name']:
 				continue
+			# print(i,plant['Name']):
+			transactions = Transactions.objects.create(users_id=1, transaction_type=trans_type, ignore=False)# not always Update
+			# print(transaction.id)
+			actions = []
 
 			if trans_type=='UPDATE':
 				plant_id = Plant.objects.filter(genus=plant['Scientific Name'].split()[0]).first().id
