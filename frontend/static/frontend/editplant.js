@@ -1,3 +1,5 @@
+
+
 var EditPlant = function(){
 	//----------------- BEGIN MODULE SCOPE VARIABLES ------------
 	var pub = {},
@@ -21,6 +23,15 @@ var EditPlant = function(){
         species =pSpecies;
         variety = pVariety;
         userId = userId;
+
+        // $(document).ready(function(){
+        //     //first slide down and blink the message box
+        //     $("#object").animate({
+        //         top: "0px"
+        //     }, 2000 ).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100);
+        //     $("#object").show(400).delay(5000).fadeOut(400)
+
+        // });
 
         jqueryMap.$plantNames.mouseenter(function(e){
             $("#clicktoedit").show()
@@ -129,7 +140,7 @@ var EditPlant = function(){
         });
 
         // Submits form when modal save button is pressed.
-        $('.submitBtn').click(function(){
+        $('.submitBtn').click(function(){ //not update names
             if (userId < 0){
                 userNotAuthenticated();
                 return;
@@ -155,12 +166,19 @@ var EditPlant = function(){
                 $("#commonName").html($("#input-commonName").val());
                 //$("#familyCommonName").html($("#input-familyCommonName").val());
                 //$("#family").html($("#input-family").val());
-                if($("#id_family option:selected").text().indexOf("--") < 0)
+                var family = $("#id_family option:selected").text();
+                if($("#id_family option:selected").text().indexOf("--") < 0){
                     $("#family").html( $("#id_family option:selected").text());
-                if($("#id_familyCommonName option:selected").text().indexOf("--") < 0)
+                    $("#family").show();
+                }
+                if($("#id_familyCommonName option:selected").text().indexOf("--") < 0){
                     $("#familyCommonName").html( $("#id_familyCommonName option:selected").text());
-                if($("#id_endemicStatus option:selected").text().indexOf("--") < 0)
+                    $("#familyCommonName").show();
+                }
+                if($("#id_endemicStatus option:selected").text().indexOf("--") < 0){
                     $("#endemicStatus").html( $("#id_endemicStatus option:selected").text());
+                    $("#endemicStatusWrapper").show();
+                }
                 $("#updateNamesMdl").modal("hide");
                 displayMessage();
             })
@@ -525,8 +543,13 @@ var EditPlant = function(){
     }
 
     function displayMessage(){
-        if(!isNew)
-            $("#edit-msg").show(400).delay(5000).hide(400);
+        // if(!isNew)
+        //     $("#edit-msg").show(400).delay(5000).hide(400);
+        // $("#object").animate({
+        //         top: "0px"
+        //     }, 2000 ).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100);
+        
+        $("#object").fadeIn(2000).delay(5000).fadeOut(400)
     }
 
     function resetBorderColor(elements){
