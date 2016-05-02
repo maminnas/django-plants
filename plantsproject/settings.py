@@ -119,6 +119,7 @@ STATIC_URL = '/static/'
 # Extra places for collectstatic to find static files.
 STATICFILES_DIRS = (
     os.path.join(PROJECT_ROOT, '../frontend/static'),
+    os.path.join(PROJECT_PATH, 'static'),
 )
 #django.contrib.auth.LOGIN_URL = '/frontend/login'
 #django.contrib.auth.LOGIN_REDIRECT_URL = '/frontend/home'
@@ -126,3 +127,12 @@ LOGIN_REDIRECT_URL = '/frontend/'
 LOGIN_URL="/frontend/"
 
 STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
+
+# List of finder classes that know how to find static files in
+# various locations.
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    'compressor.finders.CompressorFinder',
+)
