@@ -16,7 +16,6 @@ Including another URLconf
 from django.conf.urls import include, url, patterns
 from django.contrib import admin
 from login.views import *
-
 from .settings import *
 
 # urlpatterns = [
@@ -24,15 +23,16 @@ from .settings import *
 # ]
 
 urlpatterns = patterns('',
-	url(r'^admin/', include(admin.site.urls)),
+    url(r'^admin/', include(admin.site.urls)),
     url(r'^register/$', register),
     url(r'^register/success/$', register_success),
     #url(r'^home/$', home),
     #url(r'^home/', include('frontend.urls')),
-    url(r'^frontend/login/$', 'django.contrib.auth.views.login', name='login'),
-    url(r'^frontend/logout/$', 'django.contrib.auth.views.logout', {'next_page':'/frontend'}, name='logout'),
-    url(r'^frontend/', include('frontend.urls')),
+    url(r'^login/$', 'django.contrib.auth.views.login', name='login'),
+    url(r'^logout/$', 'django.contrib.auth.views.logout', {'next_page':'/'}, name='logout'),
+    url(r'^', include('frontend.urls')),
 )
+
 # if not settings.DEBUG:
 urlpatterns += patterns('',
  (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': STATIC_ROOT}),
