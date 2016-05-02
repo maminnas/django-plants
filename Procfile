@@ -1,1 +1,2 @@
-web: python myapp/manage.py collectstatic --noinput; python manage.py runserver 0.0.0.0:$PORT --noreload
+web: python myapp/manage.py collectstatic --noinput; 
+web: python manage.py runserver 0.0.0.0:$PORT --noreload
