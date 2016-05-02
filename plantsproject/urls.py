@@ -31,7 +31,7 @@ urlpatterns = patterns('',
     url(r'^frontend/logout/$', 'django.contrib.auth.views.logout', {'next_page':'/frontend'}, name='logout'),
     url(r'^frontend/', include('frontend.urls')),
 )
-if not settings.DEBUG:
-    urlpatterns += patterns('',
-        (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.STATIC_ROOT}),
-    )
+# if not settings.DEBUG:
+#     urlpatterns += patterns('',
+#         (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.STATIC_ROOT}),
+#     )
