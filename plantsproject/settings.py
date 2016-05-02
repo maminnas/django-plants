@@ -119,7 +119,7 @@ STATIC_URL = '/static/'
 # Extra places for collectstatic to find static files.
 STATICFILES_DIRS = (
     os.path.join(PROJECT_ROOT, '../frontend/static'),
-    os.path.join(PROJECT_PATH, 'static'),
+    os.path.join(PROJECT_ROOT, 'static'),
 )
 #django.contrib.auth.LOGIN_URL = '/frontend/login'
 #django.contrib.auth.LOGIN_REDIRECT_URL = '/frontend/home'
