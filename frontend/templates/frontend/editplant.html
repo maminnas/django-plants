@@ -1,130 +1,67 @@
-{% extends 'frontend/sidebar-editplant.html' %}
+ {% extends 'frontend/sidebar-editplant.html' %}
 
 {% block title %}{% spaceless %}
-
 	{% if common_name %}
 		{{ common_name }}
 	{% else %}
-		{% if genus %}
-			{{ genus }}&nbsp;
-		{% endif %}
-		{% if species %}
-			{{ species }}&nbsp;
-		{% endif %}
-		{% if variety %}
-			{{ variety }}
+		{% if genus or species or variety %}
+			{% if genus %}{{ genus }}&nbsp;{% endif %}
+			{% if species %}{{ species }}&nbsp;{% endif %}
+			{% if variety %}{{ variety }}{% endif %}
+		{% else %}
+			No Plant Name
 		{% endif %}
 	{% endif %}
-{% endspaceless %}{% endblock %}
+{% endspaceless %}
+{% endblock %}
 
 {% block maincontent %}
+<div id="hiddenTransactionId" style="display:none;">{{ transactionId }}</div> <!--do we really need these - should be object vars -->
+<div id="hiddenPlantId" style="display:none;">{{ plantId }}</div>
 
-{% if newPlant %}
-<div id="hiddenTransactionId" style="visibility:hidden;">{{ transactionId }}</div>
 <div class="row editplantrow">
-	<div class="col-sm-1"></div> 
-	<div class="col-sm-8">You are adding a plant to the database. Please allow 24 hours for your change to be reflected.</div>
-	<div class="col-sm-3"></div>
+	{% if newPlant %}
+		<div class="message hidden-xs"><p style="font-size:16px;"><strong>Thanks for your contribution!</strong></p><br>You are adding a brand new plant to the database. Please allow 24 hours for your change to be reflected across the site.</div>
+	{% else %}
+		<div id="alert" class="message" style="display:none;"><p style="font-size:16px;"><strong>Thanks for your contribution!</strong></p><br>Changes might take up to 24 hours to be reflected across the site.</div>
+	{% endif %}
 </div>
 
-{% endif %}
 
 {% if result %}
-	<div id="hiddenTransactionId" style="display:none;">{{ transactionId }}</div> <!--do we really need these - should be object vars -->
-	<div id="hiddenPlantId" style="display:none;">{{plantId}}</div>
-	<div class="row editplantrow" id="edit-msg">
-		<div class="col-sm-1"></div>
-		<div class="col-sm-8">Thanks for your contribution! Changes will be reflected on this page, but please allow 24 hours for your changes to be reflected across the site.</div>
-		<div class="col-sm-3"> </div>
-	</div>
-
-
-
-
 	<div class="row editplantrow">
-		<!-- TESTING MESSAGE- -->
-		<div id="object" class="message">
-	  	<strong>Thanks for your contribution!</strong>
-	  	<p>Changes will be reflected on this page, but please allow 24 hours for your changes to be reflected across the site.</p>
-		</div>
-		<!-- TESTING MESSAGE- -->
+		<div class="col-sm-11 col-sm-offset-1">
 
-
-		<div class="col-sm-1"></div> <!--EMPTY DIV OR OFFSET? -->
-		<div class="col-sm-11">
 			<div class="edit-plant-title">{% spaceless %}
-				<div class="name" id="genus">
-					{% if genus %}
-						{{ genus }}
-					{% endif %}
-				</div>
-				<div class="name" id="species">
-					{% if species %}
-						{{ species }}
-					{% endif %}
-				</div>
-				<div class="name" id="variety">
-					{% if variety %}
-						{{ variety }}
-					{% endif %}
-				</div>
+				{% if common_name or genus or species or variety %}
+					<div class="name" id="commonName">{% if common_name %}{{ common_name }}{% endif %}</div>
+					<div class="name editplant-latin-name" id="genus">{% if genus %}{{ genus }}{% endif %}</div>
+					<div class="name editplant-latin-name" id="species">{% if species %}{{ species }}{% endif %}</div>
+					<div class="name editplant-latin-name" id="variety">{% if variety %}{{ variety }}{% endif %}</div>
+				{% else %}
+					<div class="name" id="commonName"></div>
+					<div class="name editplant-latin-name" id="genus">No Plant Name</div>
+					<div class="name editplant-latin-name" id="species"></div>
+					<div class="name editplant-latin-name" id="variety"></div>
+				{% endif %}
 				<text id="clicktoedit" style="display:none;">click to edit</text>
 			</div>
 			
-			{% if common_name %}
-				<div class="edit-plant-title italic">
-					<div class="name" id="commonName">
-						{{ common_name }}
-					</div>
-				</div>
-			{% else %}
-				<div class="edit-plant-title italic" style="display:none;">
-					<div class="name" id="commonName"></div>
-				</div> 
-			{% endif %}
-			
+			<div class="edit-plant-subtitle">
+				<div class="name" id="familyCommonName" style="font-weight:bold;">{% if family_common_name %}{{ family_common_name }}{% endif %}</div>
+				<div class="name italic" id="family">{% if family %}{{ family }}{% endif %}</div>
+			</div>
 
-			{% if family %}
-				<div class="edit-plant-subtitle name" id="family">{{ family }}
-					<!-- <div class="name" id="family">{{ family }}</div> -->
-				</div>
-			{% else %}
-				<div class="edit-plant-subtitle name" id="family" style="display:none;">
-					<!-- <div class="name" id="family"></div> -->
-				</div> 
-			{% endif %}
-			
 
-			{% if family_common_name %}
-				<div class="edit-plant-subtitle name italic" id="familyCommonName">
-					<!-- <div class="name" id="familyCommonName">{{ family_common_name }}</div> -->
-				</div>
-			{% else %}
-				<div class="edit-plant-subtitle name italic" id="familyCommonName" style="display:none;">
-					<!-- <div class="name" id="familyCommonName"></div> -->
-				</div> 
-			{% endif %}
-
-			{% if endemic_status %}
-				{% if endemic_status != 0 %}
-				<div class="name" id="endemicStatusWrapper">Endemic Status: <p id="endemicStatus">{{ endemic_status }}</p></div>
-				{% endif %}
-
-			{% else %}
-				<div class="name" id="endemicStatusWrapper" style="display:none;">Endemic Status: <p id="endemicStatus"></p></div>
-
-			{% endif %}
+			<div id="endemicStatusWrapper">Endemic Status: <p id="endemicStatus">{% if endemic_status != 0 %}{{ endemic_status }}{% endif %}</p></div>
 			
 			{% endspaceless %}
-			
-			<!-- <div style="display:none;" id="endemicStatusWrapper">Endemic Status: <p id="endemicStatus">{% if endemic_status %}{% if endemic_status != 0 %}{{ endemic_status }}{% endif %}{% endif %}</p></div> -->
 		</div>
 	</div>
 
 
 	<div class="row editplantrow">
-		<div class="col-sm-1"></div> <!--EMPTY DIV OR OFFSET? -->
-		<div id="plant-images" class="col-sm-11">
+		<div id="plant-images" class="col-sm-11 col-sm-offset-1">
 			<div id="populated-images">
 				{% for img in images %}
 				<a href="{{ img.value }}"><img src="{{ img.value }}" class='cardimg' id="imagelightbox" alt="Plant Image" /></a>
@@ -138,25 +75,32 @@
 	</div> <!-- end row editplantrow -->
 	
 	<div class="row editplantrow">
-		<div class="col-sm-1"></div> <!--EMPTY DIV OR OFFSET? -->
-		<div class="col-sm-5" id="characteristics-block">
-			<div class="row italic attribute"><span class="glyphicon glyphicon-plus add-att-btn" id="characteristics" aria-hidden="true"></span>Characteristics</div>
+		<div class="col-sm-5 col-sm-offset-1" id="characteristics-defined">
+			<div class="row italic attribute"><span class="glyphicon glyphicon-plus add-att-btn" aria-hidden="true"></span>Characteristics</div>
 			{% for f in result.Characteristics %}
 			 
 			{% if f.value %}
 			<div class="row">
-				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" data-fieldType="{{f.field_type}}" data-className="{{ f.class_name }}" data-isNewAttribute="0">{{ f.label }}</div>
+				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" 
+				data-fieldType="{{f.field_type}}" 
+				data-className="{{ f.class_name }}" 
+				data-isNewAttribute="0"
+				data-block="characteristics">{{ f.label }}</div>
 					<div class="col-xs-8 bold">{{ f.value }}</div>
 			</div>
 			{% endif %}
 			{% endfor %}
 		</div>
-		<div class="col-sm-6" id="needs-block">
+		<div class="col-sm-6" id="needs-defined">
 			<div class="row italic attribute"><span class="glyphicon glyphicon-plus add-att-btn" aria-hidden="true"></span>Needs</div>
 			{% for f in result.Needs %}
 			{% if f.value %}
 			<div class="row">
-				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" data-fieldType="{{f.field_type}}" data-className="{{ f.class_name }}" data-isNewAttribute="0">{{ f.label }}</div>
+				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" 
+				data-fieldType="{{f.field_type}}" 
+				data-className="{{ f.class_name }}" 
+				data-block="needs" 
+				data-isNewAttribute="0">{{ f.label }}</div>
 					<div class="col-xs-8 bold">{{ f.value }}</div>
 			</div>
 			{% endif %}
@@ -164,24 +108,31 @@
 		</div>
 	</div>
 	<div class="row editplantrow">
-		<div class="col-sm-1"></div> <!--EMPTY DIV OR OFFSET? -->
-		<div class="col-sm-5" id="tolerances-block">
+		<div class="col-sm-5 col-sm-offset-1" id="tolerances-defined">
 			<div class="row italic attribute"><span class="glyphicon glyphicon-plus add-att-btn" aria-hidden="true"></span>Tolerances</div>
 			{% for f in result.Tolerances %}
 			{% if f.value %}
 			<div class="row">
-				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" data-fieldType="{{f.field_type}}" data-className="{{ f.class_name }}" data-isNewAttribute="0">{{ f.label }}</div> 
+				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" 
+				data-fieldType="{{f.field_type}}" 
+				data-className="{{ f.class_name }}" 
+				data-block="tolerances" 
+				data-isNewAttribute="0">{{ f.label }}</div> 
 					<div class="col-xs-8 bold">{{ f.value }}</div>
 			</div>
 			{% endif %}
 			{% endfor %}
 		</div>
-		<div class="col-sm-6" id="behaviors-block">
+		<div class="col-sm-6" id="behaviors-defined">
 			<div class="row italic attribute"><span class="glyphicon glyphicon-plus add-att-btn" aria-hidden="true"></span>Behaviors</div>
 			{% for f in result.Behaviors %}
 			{% if f.value %}
 			<div class="row">
-				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" data-fieldType="{{f.field_type}}" data-className="{{ f.class_name }}" data-isNewAttribute="0">{{ f.label }}</div> 
+				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" 
+				data-fieldType="{{f.field_type}}" 
+				data-className="{{ f.class_name }}" 
+				data-block="behaviors" 
+				data-isNewAttribute="0">{{ f.label }}</div> 
 				<div class="col-xs-8 bold">{{ f.value }}</div>
 			</div>
 			{% endif %}
@@ -189,13 +140,16 @@
 		</div>
 	</div>
 	<div class="row editplantrow">
-		<div class="col-sm-1"></div> <!--EMPTY DIV OR OFFSET? -->
-		<div class="col-sm-5" id="products-block">
+		<div class="col-sm-5 col-sm-offset-1" id="products-defined">
 			<div class="row italic attribute"><span class="glyphicon glyphicon-plus add-att-btn" aria-hidden="true"></span>Products</div>
 			{% for f in result.Products %}
 			{% if f.value %}
 			<div class="row">
-				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" data-fieldType="{{f.field_type}}" data-className="{{ f.class_name }}" data-isNewAttribute="0">{{ f.label }}</div> 
+				<div class="col-xs-4 italic edit-attribute" id="{{f.name}}" 
+				data-fieldType="{{f.field_type}}" 
+				data-className="{{ f.class_name }}" 
+				data-block="products" 
+				data-isNewAttribute="0">{{ f.label }}</div> 
 				<div class="col-xs-8 bold">{{ f.value }}</div>
 			</div>
 			{% endif %}
@@ -207,71 +161,72 @@
 	<!--################### ADDING NEW ATTRIBUTES ########################### -->
 
 	<div class="row editplantrow">
-		<div class="col-md-1"></div> <!--EMPTY DIV OR OFFSET? -->
-		<div class="col-md-2">
-			<div class="add-attribute-container"><div class="add-attribute-center">+ add new characteristic</div>
-			<div class="undefined-attributes" data-block="characteristics-block"> <!--Do we need this data-blocl -->
-				{% for f in result.Characteristics %}
-				{% if "ph" in f.label %}
-				found ph
-				{% endif %}
-				{% if not f.value %}
-				<div class="row">
-					<div class="col-xs-10 italic edit-attribute" 
+		<div class="col-md-6 col-md-offset-1" style="padding-right:0px;">
+			<div class="col-xs-4">
+				<div class="add-attribute-container">
+					<div class="add-attribute-center">+ add new characteristic</div>
+					<div class="undefined-attributes" id="characteristics-undefined"> <!--Do we need this data-blocl -->
+						{% for f in result.Characteristics %}
+						{% if not f.value %}
+						<div class="row">
+							<div class="col-xs-10 italic edit-attribute" 
+								id="{{f.name}}" 
+								data-fieldType="{{f.field_type}}" 
+								data-className="{{ f.class_name }}"
+								data-block="characteristics"
+								data-isNewAttribute="1">{{ f.label }}
+							</div> 
+							<div class="col-xs-2 hidden bold">undefined</div>
+						</div>
+						{% endif %}
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+			<div class="col-xs-4">
+				<div class="add-attribute-container"><div class="add-attribute-center">+ add new need</div>
+				<div class="undefined-attributes" id="needs-undefined">
+					{% for f in result.Needs %}
+					{% if not f.value %}
+					<div class="row">
+						<div class="col-xs-10 italic edit-attribute" 
 						id="{{f.name}}" 
 						data-fieldType="{{f.field_type}}" 
 						data-className="{{ f.class_name }}"
-						data-block="characteristics-block"
-						data-isNewAttribute="1">{{ f.label }}
-					</div> 
-					<div class="col-xs-2 bold" style="visibility:hidden;">undefined</div>
+						data-block="needs"
+						data-isNewAttribute="1">{{ f.label }}</div> 
+						<div class="col-xs-2 hidden bold">undefined</div>
+					</div>
+					{% endif %} 
+					{% endfor %}
 				</div>
-				{% endif %}
-				{% endfor %}
+				</div>
 			</div>
+		
+			<div class="col-xs-4">
+				<div class="add-attribute-container"><div class="add-attribute-center">+ add new tolerance</div>
+				<div class="undefined-attributes" id="tolerances-undefined">
+					{% for f in result.Tolerances %}
+					{% if not f.value %}
+					<div class="row">
+						<div class="col-xs-10 italic edit-attribute" 
+						id="{{f.name}}" 
+						data-fieldType="{{f.field_type}}" 
+						data-className="{{ f.class_name }}" 
+						data-block="tolerances"
+						data-isNewAttribute="1">{{ f.label }}</div> 
+						<div class="col-xs-2 hidden bold">undefined</div>
+					</div>
+					{% endif %}
+					{% endfor %}
+				</div>
+				</div>
 			</div>
 		</div>
-		<div class="col-md-2">
-			<div class="add-attribute-container"><div class="add-attribute-center">+ add new need</div>
-			<div class="undefined-attributes">
-				{% for f in result.Needs %}
-				{% if not f.value %}
-				<div class="row">
-					<div class="col-xs-10 italic edit-attribute" 
-					id="{{f.name}}" 
-					data-fieldType="{{f.field_type}}" 
-					data-className="{{ f.class_name }}"
-					data-block="needs-block"
-					data-isNewAttribute="1">{{ f.label }}</div> 
-					<div class="col-xs-2 bold" style="visibility:hidden;">undefined</div>
-				</div>
-				{% endif %} 
-				{% endfor %}
-			</div>
-			</div>
-		</div>
-		<div class="col-md-2">
-			<div class="add-attribute-container"><div class="add-attribute-center">+ add new tolerance</div>
-			<div class="undefined-attributes">
-				{% for f in result.Tolerances %}
-				{% if not f.value %}
-				<div class="row">
-					<div class="col-xs-10 italic edit-attribute" 
-					id="{{f.name}}" 
-					data-fieldType="{{f.field_type}}" 
-					data-className="{{ f.class_name }}" 
-					data-block="tolerances-block"
-					data-isNewAttribute="1">{{ f.label }}</div> 
-					<div class="col-xs-2 bold" style="visibility:hidden;">undefined</div>
-				</div>
-				{% endif %}
-				{% endfor %}
-			</div>
-			</div>
-		</div>
-		<div class="col-md-2">
+	<div class="col-md-5">
+		<div class="col-xs-4">
 			<div class="add-attribute-container"><div class="add-attribute-center">+ add new behavior</div>
-			<div class="undefined-attributes">
+			<div class="undefined-attributes" id="behaviors-undefined">
 				{% for f in result.Behaviors %}
 				{% if not f.value %}
 				<div class="row">
@@ -279,36 +234,36 @@
 					id="{{f.name}}" 
 					data-fieldType="{{f.field_type}}" 
 					data-className="{{ f.class_name }}" 
-					data-block="behaviors-block"
+					data-block="behaviors"
 					data-isNewAttribute="1">{{ f.label }}</div> 
-					<div class="col-xs-2 bold" style="visibility:hidden;">undefined</div>
+					<div class="col-sm-2 hidden bold">undefined</div>
 				</div>
 				{% endif %}
 				{% endfor %}
 			</div>
 			</div>
 		</div>
-		<div class="col-md-2">
+		<div class="col-xs-4">
 			<div class="add-attribute-container"><div class="add-attribute-center">+ add new product</div>
-			<div class="undefined-attributes">
+			<div class="undefined-attributes" id="products-undefined">
 				{% for f in result.Products %}
-				{% if not f.value %}
+				{% if not f.value %} 
 				<div class="row">
-					<div class="col-xs-10 italic edit-attribute" 
+					<div class="col-sm-10 italic edit-attribute" 
 					id="{{f.name}}" 
 					data-fieldType="{{f.field_type}}" 
 					data-className="{{ f.class_name }}" 
-					data-block="products-block"
+					data-block="products"
 					data-isNewAttribute="1">{{ f.label }}</div> 
-					<div class="col-xs-2 bold" style="visibility:hidden;">undefined</div>
+					<div class="col-xs-2 hidden bold">undefined</div>
 				</div>
 				{% endif %}
 				{% endfor %}
 			</div>
 			</div>
 		</div>
-		<div class="col-md-1">
-		</div>
+		<div class="col-xs-4"></div>
+	</div>
 
 	</div>
 	
@@ -331,10 +286,15 @@
 	genus = "{{ genus }}";
 	species = "{{ species }}";
 	variety = "{{ variety }}";
+
+	{% if not endemic_status %}
+	$("#endemicStatusWrapper").hide();
+	{% endif %}
+
 	{% if userId %}
-		EditPlant.init(common_name, genus, species, variety, {{ transactionId }}, {{ userId }});
+		EditPlant.init(common_name, genus, species, {{ transactionId }}, {{ userId }});
 	{% else %}
-		EditPlant.init(common_name, genus, species, variety, {{ transactionId }}, -1);
+		EditPlant.init(common_name, genus, species, {{ transactionId }}, -1);
 	{% endif %} 
 	//EditPlant.init(common_name, genus, species, variety, {{ transactionId }}, id); //pass transactionId as 0?
 
@@ -343,6 +303,9 @@
 	$(function () {
         $('#plant-images a').fluidbox();
     })
+
+
+
 </script>
 
 

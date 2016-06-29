@@ -676,14 +676,6 @@ def csv_import3(path,trans_type):
 					seasons.append('spring')
 				if 'summer' in harvest_periods:
 					seasons.append('summer')
-				# if plant['Fruit/Seed Period End'].strip() == 'Year Round':# or All Year
-				# 	seasons.append('autumn')
-				# 	seasons.append('winter')
-				# 	seasons.append('spring')
-				# 	seasons.append('summer')
-				# else:
-				# 	print(plant['Fruit/Seed Period End'].strip())
-				# 	# raise ValueError('Need to add handling for Fruit/Seed Period End = ' + plant['Fruit/Seed Period End'].strip())
 
 				for season in seasons:
 					harvest_period_id = HarvestPeriod.objects.filter(value=season).first().id
@@ -781,9 +773,7 @@ def csv_import3(path,trans_type):
 def csv_import2(path,trans_type):############################serotiny, degree_of_serotiny, allelochemicals######
 	with open(path) as f:
 		reader = csv.DictReader(f)#csv.reader(f)    
-		for i,plant in enumerate(reader):#reader:
-			# if i>30:
-			# 	break
+		for i,plant in enumerate(reader):
 
 			# 1. Don't import the entry if the Scientific Name is one word. (e.g., 'Ambrosia' versus 'Ambrosia acanthicarpa')
 			if not(plant['Scientific Name']):

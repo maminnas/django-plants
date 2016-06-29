@@ -4,55 +4,80 @@ var EditPlant = function(){
 	//----------------- BEGIN MODULE SCOPE VARIABLES ------------
 	var pub = {},
         jqueryMap = {},
-        setJqueryMap,
+        //setJqueryMap,
         transactionId,
-        isNew;
-	//----------------- END MODULE SCOPE VARIABLES ------------
+        userId,
+        filters = [];
+        //isNew;
+	//----------------- END MODULE SCOPE VARIABLES --------------
 
 	//----------------- BEGIN PUBLIC METHODS --------------------
-    pub.init = function(pCommonName, pGenus, pSpecies, pVariety, transactionId, userId){
+    //pub.init = function(pCommonName, pGenus, pSpecies, pVariety, transactionId, userId){
+    pub.init = function(pCommonName, pGenus, pSpecies, transactionId, userId){
+        setUserId(userId);
     	setJqueryMap();
-        transactionId = transactionId;
-        isNew = transactionId != 0;
+        transactionId = transactionId == "None" ? 0 : transactionId;
         common_name = pCommonName;
         genus = pGenus;
         species =pSpecies;
-        variety = pVariety;
-        userId = userId;
+        resetUpdateAttributeModal();
 
+
+        // -----------------------------------------------------------------------
+        // Hide the undefined attribute blocks if all are defined in that category
+        if(checkIfEmpty($("#characteristics-undefined"))){
+            $("#characteristics-undefined").parent().hide();
+        }
+        if(checkIfEmpty($("#needs-undefined"))){
+            $("#needs-undefined").parent().hide();
+        }
+        if(checkIfEmpty($("#tolerances-undefined"))){
+            $("#tolerances-undefined").parent().hide();
+        }
+        if(checkIfEmpty($("#behaviors-undefined"))){
+            $("#behaviors-undefined").parent().hide();
+        }
+        if(checkIfEmpty($("#products-undefined"))){
+            $("#products-undefined").parent().hide();
+        }
+        // ----------------------------------------------------------------------
+
+
+        // ----------------------- BEGIN JQUERY LISTENERS -----------------------
+        // jQuery Event: Mouse enters plant names (common name, latin name, family, etc.) 
+        // Reslting Action Summary: Display "click to edit"
         jqueryMap.$plantNames.mouseenter(function(e){
             $("#clicktoedit").show()
         });
 
+        // jQuery Event: Mouse leaves (common name, latin name, family, etc.)
+        // Reslting Action Summary: Hide "click to edit"
         jqueryMap.$plantNames.mouseleave(function(e){
             $("#clicktoedit").hide()
         });
 
-        // Opens modal to edit the general plant information
+        // jQuery Event: Plant Names (common name, latin name, family, etc.) are clicked
+        // Reslting Action Summary: Display modal to edit plant names
         jqueryMap.$plantNames.click(function(e){
-            if (userId < 0){
+            if (userId < 1){
                 userNotAuthenticated();
                 e.stopPropagation();
                 return;
             }
             resetNameChangeFlags();
-            $("#hidden-plantId").val(getPlantId());
+            $("#hidden-plantId-names").val(getPlantId());
             $("#transaction-id").val(transactionId);
             $("#input-genus").val($("#genus").text().trim());
             $("#input-species").val($("#species").text().trim());
             $("#input-variety").val($("#variety").text().trim());
             $("#input-commonName").val($("#commonName").text().trim());
-            //$("#input-family").val($("#family").text().trim());
-            //$("#input-familyCommonName").val($("#familyCommonName").text().trim());
             var val = $("#family").text().trim();
             if(val != ""){
                 $("#id_family").find('option:contains("'+ val+ '")').attr("selected",true);
-                //$("#family-text").val(val);
             }
             val = $("#familyCommonName").text().trim();
             if(val != ""){
                 $("#id_familyCommonName").find('option:contains("'+ val+ '")').attr("selected",true);
-                //$("#familyCommonName-text").val(val);
             }
             val = $("#endemicStatus").text().trim();
             if(val != ""){
@@ -60,8 +85,8 @@ var EditPlant = function(){
                 $("#endemicStatus-text").val(val);
             }
 
-            $("#id_family").select2();
-            $("#id_familyCommonName").select2();
+            $("#id_family").select2({tags:true});
+            $("#id_familyCommonName").select2({tags:true});
             $("#id_endemicStatus").select2();
 
             jqueryMap.$updateNamesMdl.modal();
@@ -74,22 +99,33 @@ var EditPlant = function(){
             });
         });
 
-        //Opens modal to edit an attribute
+        // jQuery Event: A plant attribute is clicked (whether defined already or not)
+        // Reslting Action Summary: Display modal for filling in attribute value
         $(document).on('click', '.edit-attribute', function(){
-            if (userId < 0){
+            if (userId < 1){
                 userNotAuthenticated();
                 return;
             }
             clearForms();
             $("#id_select").find('option').remove();
 
+            var isNewAttribute = $(this).attr("data-isNewAttribute");
+            if(isNewAttribute == "1"){
+                $(".rmvBtn").hide();
+            }
+            else{
+                $(".rmvBtn").show();
+            }
+
             // $(this) == the attribute that was clicked
             var attribute_prop = $(this).attr('id');
             var attribute_className = $(this).attr('data-className');
             var attribute_displayName = $(this).text();
             var attribute_fieldType = $(this).attr("data-fieldType");
-            var defaultVal = $(this).next().text().replace(",", "");
+            var defaultVal = $(this).next().text().split(", ");
+
             $("#hidden-dataType").val(attribute_fieldType); //other, many_to_many, many_to_one
+            $("#hidden-transactionId").val(transactionId);
 
             jqueryMap.$attributeLabel.html(attribute_displayName);
             jqueryMap.$attributeLabel.attr("data-block", $(this).attr("data-block"));
@@ -100,73 +136,91 @@ var EditPlant = function(){
 
             if(attribute_fieldType == 'other'){
                 $("#id_text").show();
-                if($("#id_select").data('select2'))
-                    $("#id_select").select2('destroy');
-                $("#id_select").hide();
-                if($("#id_multi").data('select2'))
-                    $("#id_multi").select2('destroy');
-                $("#id_multi").hide(); 
+                // if($("#id_select").data('select2'))
+                //     $("#id_select").select2('destroy');
+                // $("#id_select").hide();
+                // if($("#id_multi").data('select2'))
+                //     $("#id_multi").select2('destroy');
+                // $("#id_multi").hide(); 
                 $("#id_text").attr("placeholder", $(this).next().text());                
             }
             else if(attribute_fieldType == 'many_to_many'){
                 
                 load_values(true, attribute_className, defaultVal);
 
-                $("#id_text").hide();
-                $("#id_select").hide();
-                if($("#id_select").data('select2'))
-                    $("#id_select").select2('destroy');
+                // $("#id_text").hide();
+                // $("#id_select").hide();
+                // if($("#id_select").data('select2'))
+                //     $("#id_select").select2('destroy');
                 $("#id_multi").show(); 
 
             }
             else {
-
-                $("#id_text").hide();
-                $("#id_select").show();
-                if($("#id_multi").data('select2'))
-                    $("#id_multi").select2('destroy');
-                $("#id_multi").hide(); 
-
                 load_values(false, attribute_className, defaultVal);
+                // $("#id_text").hide();
+                $("#id_select").show();
+                // if($("#id_multi").data('select2'))
+                //     $("#id_multi").select2('destroy');
+                // $("#id_multi").hide(); 
+
+                
 
             }
             
             $("#updateAttributeMdl").modal();
         });
 
-
-
-
-        // Submits form when modal save button is pressed.
+        // jQuery Event: Plant Names (common name, latin name, family, etc.) are hovered
+        // Reslting Action Summary: Display "click to edit"
         $('.submitBtn').click(function(){ //not update names
-            if (userId < 0){
-                userNotAuthenticated();
+            if (userId < 1){
+                 userNotAuthenticated();
                 return;
             }
-            var $form = $(this).closest(".modal-content").find("form").submit();
+            var $form = $(this).closest(".modal-content").find("form").submit(); //need var? // use jquery map here
         });
 
         $('.rmvBtn').click(function(){ //not update names
-            if (userId < 0){
+            if (userId < 1){
                 userNotAuthenticated();
                 return;
             }
 
-            //var propertyName = $("#hidden-propName-t").val();
+            $.post('/removeAttribute/', $("#updateAttributeMdl form").serialize(), function(data){
+                var property = $("#hidden-propName").val();
 
-            // $('#' + propertyName).next().remove();
-            // $('#' + propertyName).remove();
+                $property = $("#" + property);
+                $property.attr("data-isNewAttribute", 1);
+                $property.attr("data-block", jqueryMap.$attributeLabel.attr("data-block"));
+                $property.removeClass("col-xs-4");
+                $property.addClass("col-xs-10")
+                $val = $("#" + property).next();
+                $val.html("undefined");
+                $val.css("visibility", "hidden");
+                $val.removeClass("col-xs-8");
+                $val.addClass("col-xs-2");
+                $row = $("#" + property).parent();
 
-            alert("Removing...");
+
+                $row.remove();
+                var $block = $("#" + jqueryMap.$attributeLabel.attr("data-block") + "-undefined");
+                $block.parent().show();
+                $row.appendTo($block);
+
+            })
+            .fail(function(){
+                alert("Fail");
+            });
         });
 
         // Submits general plant information form when modal button is clicked
         $("#updateNames-submit").on("click", function(){
-            if (userId < 0){
+            if (userId < 1){
                 userNotAuthenticated();
                 return;
             }
-            $.post('/frontend/updateNames/', $("#updateNamesMdl form").serialize(), function(data){
+
+            $.post('/updateNames/', $("#updateNamesMdl form").serialize(), function(data){
                 //alert($("#genus-flag").val());
                 //alert($("#species-flag").val()); //RESET FLAGS??????????????????????????????!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 $("#genus").html($("#input-genus").val());
@@ -181,11 +235,11 @@ var EditPlant = function(){
                 var family = $("#id_family option:selected").text();
                 if($("#id_family option:selected").text().indexOf("--") < 0){
                     $("#family").html( $("#id_family option:selected").text());
-                    $("#family").show();
+                    //$("#family").show();
                 }
                 if($("#id_familyCommonName option:selected").text().indexOf("--") < 0){
                     $("#familyCommonName").html( $("#id_familyCommonName option:selected").text());
-                    $("#familyCommonName").show();
+                    //$("#familyCommonName").show();
                 }
                 if($("#id_endemicStatus option:selected").text().indexOf("--") < 0){
                     $("#endemicStatus").html( $("#id_endemicStatus option:selected").text());
@@ -201,11 +255,11 @@ var EditPlant = function(){
 
         // Opens modal and displays flickr image options
         jqueryMap.$addNewImg.click(function(){
-            if (userId < 0){
+            if (userId < 1){
                 userNotAuthenticated();
                 return;
             }
-            searchFlickrPictures()
+            searchFlickrPictures(generateSearchString());
         });
 
         // Changes CSS on images displayed in the modal
@@ -222,7 +276,7 @@ var EditPlant = function(){
                 if(!$(this).hasClass('selected'))
                 $(this).css('border-color', '#ddd');
             }
-        }, '.cardimg');
+        }, '.modalimg');
 
 
         $("#input-genus").on('keydown', function(){
@@ -250,49 +304,46 @@ var EditPlant = function(){
         }); 
 
         $("#updateAttributeMdl form").submit(function(e){
-            if (userId < 0){
+            if (userId < 1){
                 userNotAuthenticated();
                 return;
             }
             
             var dataType = $("#hidden-dataType").val();
-
+            var isNewAttribute = jqueryMap.$attributeLabel.attr("data-isNewAttribute");
             if(dataType === "other"){
-                alert("This is text.");
                 var value = $("#id_text").val();
-                var isNewAttribute = jqueryMap.$attributeLabel.attr("data-isNewAttribute");
-
                 var url = '/updateText/' + transactionId + "/";
                 url += isNewAttribute == "1" ? "INSERT/" : "UPDATE/";
             }
             else if(dataType == "many_to_many"){
-                alert("This is multi TEST");
+                //alert("This is multi TEST");
 
                 var selections = $('#id_multi').select2('data');
                 var value = selections[0].text;
                 for(var i = 1; i < selections.length; i++){
                     value += ", " + selections[i].text;
                 }
-
-                var isNewAttribute = jqueryMap.$attributeLabel.attr("data-isNewAttribute");
                 var url = '/updateMulti/' + transactionId + "/";
                 url += isNewAttribute == "1" ? "INSERT/" : "UPDATE/";
             }
             else{
-                alert("This is select");
-                var isNewAttribute = jqueryMap.$attributeLabel.attr("data-isNewAttribute");
+                //alert("This is select");
                 var value = $('#id_select').select2('data')[0].text;
                 var url = '/updateSelect/' + transactionId + "/";
                 url += isNewAttribute == "1" ? "INSERT/" : "UPDATE/";
             }
 
-            alert("Posting " + url);
+            //alert("Posting " + url);
             $.post(url, $(this).serialize(), function(data){
                 var label = jqueryMap.$attributeLabel.text()
                 var className = $("#hidden-className").val();
                 var propertyName = jqueryMap.$attributePropName.val();
 
                 $("#updateAttributeMdl").modal('hide');
+
+                resetUpdateAttributeModal();
+
 
                 if(isNewAttribute == "1" ){
                     var $newRow = $("<div>")
@@ -304,29 +355,37 @@ var EditPlant = function(){
                         .attr("data-fieldType", dataType)
                         .attr("data-className", className)
                         .attr("data-block", jqueryMap.$attributeLabel.attr("data-block"))
+                        .attr("data-isNewAttribute", 0)
                         .html(label)
                         .appendTo($newRow);
                     var $attributeVal = $('<div>');
                     $attributeVal.addClass("col-xs-8 bold").html(value).appendTo($newRow);
 
-                    var block = "#" + jqueryMap.$attributeLabel.attr("data-block");
+                    var block = "#" + jqueryMap.$attributeLabel.attr("data-block") + "-defined";
+                    
 
                     $(block).find('#' + propertyName).next().remove();
                     $(block).find('#' + propertyName).remove();
 
                     $newRow.appendTo($(block));
-                    $('.undefined-attributes').find('#' + propertyName).remove();
+                    $('.undefined-attributes').find('#' + propertyName).parent().remove();
+
+
+                    var block2 = "#" + jqueryMap.$attributeLabel.attr("data-block") + "-undefined";
+                    if(checkIfEmpty($(block2))){
+                        $(block2).parent().hide();
+                    }
+
+
                 }
                 else{
                     $("#" + propertyName).next().text(value);
                 }
 
-                alert("New transaction id: " + data)
                 transactionId = data;
                 displayMessage();
             })
             .fail(function(data){
-                alert("Could not update attribute." + data);
                 transactionId = data;
             });
             e.preventDefault();
@@ -334,7 +393,7 @@ var EditPlant = function(){
 
 
         jqueryMap.$chooseImg.on("click", function(){
-            if (userId < 0){
+            if (userId < 1){
                 userNotAuthenticated();
                 return;
             }
@@ -342,7 +401,6 @@ var EditPlant = function(){
 
             $("#hidden-plantId-img").val(getPlantId());
             $("#hidden-url-img").val(url);
-
 
             $.post('/addImg/', $("#addImg form").serialize(), function(data){
                 $("<img />").attr("src", url)
@@ -361,12 +419,24 @@ var EditPlant = function(){
             });
         });
 
+        $("#flickrSearchBtn").click(function(){
+            searchFlickrPictures($("#flickrSearchText").val());
+            updateImgModalMessage($("#flickrSearchText").val());
+        });
+
+        $("#flickrSearchText").on("keypress", function(){
+            $("#flickrSearchBtn").show();
+        });
+
+        // ----------------------- END JQUERY LISTENERS -----------------------
+
     }
     return pub;
 
     //----------------- END PUBLIC METHODS --------------------
 
     //----------------- BEGIN DOM METHODS -----------------------
+
     function setFlag($flag){
         $flag.val(1);
     }
@@ -380,6 +450,10 @@ var EditPlant = function(){
         $("#familyCommonName-flag").val(0);
         $("#endemicStatus-flag").val(0);
      }
+
+    function setUserId(id){
+        userId = id;
+    }
 
     function setJqueryMap() {
         jqueryMap = {
@@ -395,8 +469,7 @@ var EditPlant = function(){
         };
     }
 
-    function searchFlickrPictures(){
-        var pageNumber = 1;
+    function generateSearchString(){
         var searchString = "";
         var searchStringDisplay = "";
 
@@ -404,51 +477,77 @@ var EditPlant = function(){
             searchString = escapeString(common_name);
             searchStringDisplay = common_name;
         }
-        if(genus != "None"){
-            searchString += searchString.length > 0 ? "," + escapeString(genus) : escapeString(genus);
-            searchStringDisplay += searchStringDisplay.length > 0 ? " " + genus : genus;
-        }
-        if(species != "None"){
-            searchString += searchString.length > 0 ? "," + escapeString(species) : escapeString(species);
-            searchStringDisplay += searchStringDisplay.length > 0 ? " " + species : species;
-        }
+        // if(genus != "None"){
+        //     searchString += searchString.length > 0 ? "," + escapeString(genus) : escapeString(genus);
+        //     searchStringDisplay += searchStringDisplay.length > 0 ? " " + genus : genus;
+        // }
+        // if(species != "None"){
+        //     searchString += searchString.length > 0 ? "," + escapeString(species) : escapeString(species);
+        //     searchStringDisplay += searchStringDisplay.length > 0 ? " " + species : species;
+        // }
 
-        $("#addImg-tag").attr('placeholder', searchStringDisplay);
+        //alert(searchString + "\n" + searchStringDisplay + "\n" + searchStringDisplay.split(" ").join(","));
+
+        //searchFlickrPictures(searchString, searchStringDisplay);
+
+        return searchStringDisplay;
+    }
+
+    function searchFlickrPictures(searchStringDisplay){
+        var pageNumber = 1;
+    
+        
         $(".back").hide();
-        loadNewImages(searchString, pageNumber);
+        loadNewImages(searchStringDisplay, pageNumber);
         jqueryMap.$addImgModal.modal();
 
-        jqueryMap.$addImgModal.on("click", ".forward", function(){
-            loadNewImages(searchString, ++pageNumber);
-            $(".back").show();
-        });
+        
+    }
 
-        jqueryMap.$addImgModal.on("click", ".back", function(){
-            if(pageNumber == 1){
-                return;
-            }
-            else{
-                loadNewImages(searchString, --pageNumber);
-                if(pageNumber == 1)
-                    $(".back").hide();
-            }
-        });
+    function updateImgModalMessage(searchString){
+        $("#addImg-tag").html(searchString);
     }
 
     function loadNewImages(searchString, pageNumber){
+        updateImgModalMessage(searchString);
+
+        var escapedString = escapeString(searchString)
         var url = "https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=0dde4e72b0091627e13df41e631b85ec&tags="
-                    +searchString+"&safe_search=1&per_page=3&page=" + pageNumber+ "&format=json&nojsoncallback=1";
+                    +escapedString+"&safe_search=1&per_page=3&page=" + pageNumber+ "&format=json&nojsoncallback=1";
         var src;
         $.getJSON(url, function(data){
             jqueryMap.$imgMdlContent.html("");
             $.each(data.photos.photo, function(i,item){
                 src = "http://farm"+ item.farm +".static.flickr.com/"+ item.server +"/"+ item.id +"_"+ item.secret +"_m.jpg";
-                $("<img />").attr("src", src).addClass('cardimg').appendTo(jqueryMap.$imgMdlContent);
+                $("<img />").attr("src", src).addClass('modalimg').appendTo(jqueryMap.$imgMdlContent);
+            });
+
+            $("#flickrSearchBtn").hide();
+            $("#flickrSearchText").val("");
+
+
+            $(".forward").off("click").on("click", function(e){
+                loadNewImages(searchString, ++pageNumber);
+                $(".back").show();
+                e.stopPropagation();
+            });
+
+            $(".back").off("click").on("click", function(e){
+                if(pageNumber == 1){
+                    return;
+                }
+                else{
+                    loadNewImages(searchString, --pageNumber);
+                    if(pageNumber == 1)
+                        $(".back").hide();
+                }
+                e.stopPropagation();
             });
         });
     }
 
-    function load_values(isMultiSelect, className, defaultVal){
+
+    function load_values(isMultiSelect, className, defaultValArray){
         var $select
         if(isMultiSelect){
             $("#id_multi").addClass("js-example-basic-multiple");
@@ -458,15 +557,17 @@ var EditPlant = function(){
             $("#id_select").addClass("js-example-basic-single");
             $select = $("#id_select")
         }
+        $select.empty();
         $.ajax({
             type: 'GET',
-            url: "/reload_controls/" + className+ "/" + defaultVal,
+            url: "/reload_controls/" + className,
+            data:{'defaultVals[]': defaultValArray},
             dataType: 'json',
             contentType: 'json',
             success: function(result)
             {
                 $("#hidden-oldVals-m").val(result.defaultIds);
-                $select.empty();
+                // $select.empty();
                 for(var i = 0; i < result.dropdownvals.length; i++){
                     var dictionary = result.dropdownvals[i]
                     if(result.defaultIds.indexOf(dictionary.id) > -1)
@@ -484,13 +585,7 @@ var EditPlant = function(){
     }
 
     function displayMessage(){
-        // if(!isNew)
-        //     $("#edit-msg").show(400).delay(5000).hide(400);
-        // $("#object").animate({
-        //         top: "0px"
-        //     }, 2000 ).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100).fadeOut(100).fadeIn(100);
-        
-        $("#object").fadeIn(2000).delay(5000).fadeOut(400)
+        $("#alert").fadeIn(2000).delay(5000).fadeOut(400)
     }
 
     function resetBorderColor(elements){
@@ -515,5 +610,23 @@ var EditPlant = function(){
     function clearForms(){
         $('form').find("input[type=text], input[type=select]").val("");
     }
+
+    function checkIfEmpty($div){
+        if($div.children().length <= 0)
+            return true;
+        else
+            return false;
+    }
+
+    function resetUpdateAttributeModal(){
+        if($("#id_select").data('select2'))
+            $("#id_select").select2('destroy');
+        if($("#id_multi").data('select2'))
+            $("#id_multi").select2('destroy');
+        $("#id_text").hide();
+        $("#id_select").hide();
+        $("#id_multi").hide();
+    }
+
     //----------------- END DOM METHODS -----------------------
 }(); 

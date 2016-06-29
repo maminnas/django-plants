@@ -1,7 +1,7 @@
+$("#search-magnifying-glass").on("click", function(){
+	$('#searchform').submit();
+});
 
-$("#search-magnifying-glass").on('click', function(){
-	searchValue = $("#searchbar").val();
-	alert("Searching for " + searchValue)
-
-	$(this).closest(".modal-content").find("form").submit();
+$("#searchform").submit(function(){
+	$("#searchform").attr("action", "/search/" + $("#searchbar").val() + "/");
 });

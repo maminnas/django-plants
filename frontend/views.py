@@ -1,5 +1,5 @@
 from django.http import *
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render #, render_to_response, redirect
 from django.template import RequestContext
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
@@ -12,12 +12,20 @@ from django.core import serializers
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 import pdb
+from django.views.generic import View
+#import django_filters
+from rest_framework import generics
 
+
+from django.template.defaulttags import register
+@register.filter
+def get_item(dictionary, key):
+	return dictionary.get(key)
 
 EmptyPlant = {
 	'Characteristics':[
-		{'name':'ph_min', 'field_type':'other', 'value':None, 'label':'pH min', 'class_name':'temp'},
-		{'name':'ph_max', 'field_type':'other', 'value':None, 'label':'pH max', 'class_name':'temp'},
+		{'name':'pH_min', 'field_type':'other', 'value':None, 'label':'pH min', 'class_name':'temp'},
+		{'name':'pH_max', 'field_type':'other', 'value':None, 'label':'pH max', 'class_name':'temp'},
 		{'name':'degree_of_serotiny', 'field_type':'many_to_one', 'value':None, 'label':'degree of serotiny', 'class_name':'DegreeOfSerotiny'},
 		{'name':'duration', 'field_type':'many_to_many', 'value':None, 'label':'duration', 'class_name':'Duration'},
 		{'name':'height', 'field_type':'other', 'value':None, 'label':'height', 'class_name':'temp'},
@@ -34,8 +42,8 @@ EmptyPlant = {
 	],
 	'Needs':[
 		{'name':'innoculant', 'field_type':'other', 'value':None, 'label':'innoculant', 'class_name':'temp'},
-		{'name':'serotiny', 'field_type':'many_to_one', 'value':None, 'label':'serotiny', 'class_name':'temp'},
-		{'name':'fertility_needs', 'field_type':'many_to_many', 'value':None, 'label':'Nutrient Requirements', 'class_name':'NutrientRequirements'},
+		{'name':'serotiny', 'field_type':'many_to_one', 'value':None, 'label':'serotiny', 'class_name':'Serotiny'},
+		{'name':'fertility_needs', 'field_type':'many_to_many', 'value':None, 'label':'nutrient requirements', 'class_name':'NutrientRequirements'},
 		{'name':'water_needs', 'field_type':'many_to_many', 'value':None, 'label':'water needs', 'class_name':'WaterNeeds'},
 		{'name':'sun_needs', 'field_type':'many_to_many', 'value':None, 'label':'sun needs', 'class_name':'SunNeeds'}
 	],
@@ -61,12 +69,12 @@ EmptyPlant = {
 	],
 	'Products':[
 		{'name':'allelochemicals', 'field_type':'other', 'value':None, 'label':'allelochemicals', 'class_name':'temp'},
-		{'name':'food_prod', 'field_type':'many_to_many', 'value':None, 'label':'food prod', 'class_name':'FoodProd'},
-		{'name':'raw_materials_prod', 'field_type':'many_to_many', 'value':None, 'label':'raw materials prod', 'class_name':'RawMaterialsProd'},
-		{'name':'medicinals_prod', 'field_type':'many_to_many', 'value':None, 'label':'medicinals prod', 'class_name':'MedicinalsProd'},
-		{'name':'biochemical_material_prod', 'field_type':'many_to_many', 'value':None, 'label':'biochemical material prod', 'class_name':'BiochemicalMaterialProd'},
-		{'name':'cultural_and_amenity_prod', 'field_type':'many_to_many', 'value':None, 'label':'cultural and amenity prod', 'class_name':'CulturalAndAmenityProd'},
-		{'name':'mineral_nutrients_prod', 'field_type':'many_to_many', 'value':None, 'label':'mineral nutrients prod', 'class_name':'MineralNutrientsProd'}
+		{'name':'food_prod', 'field_type':'many_to_many', 'value':None, 'label':'food', 'class_name':'FoodProd'},
+		{'name':'raw_materials_prod', 'field_type':'many_to_many', 'value':None, 'label':'raw materials', 'class_name':'RawMaterialsProd'},
+		{'name':'medicinals_prod', 'field_type':'many_to_many', 'value':None, 'label':'medicinals', 'class_name':'MedicinalsProd'},
+		{'name':'biochemical_material_prod', 'field_type':'many_to_many', 'value':None, 'label':'biochemical material', 'class_name':'BiochemicalMaterialProd'},
+		{'name':'cultural_and_amenity_prod', 'field_type':'many_to_many', 'value':None, 'label':'cultural and amenity', 'class_name':'CulturalAndAmenityProd'},
+		{'name':'mineral_nutrients_prod', 'field_type':'many_to_many', 'value':None, 'label':'mineral nutrients', 'class_name':'MineralNutrientsProd'}
 	]
 }
 
@@ -84,7 +92,7 @@ Tolerances = [
 	'shade_tol', 'salt_tol', 'flood_tol', 'drought_tol', 'humidity_tol', 'wind_tol', 'soil_drainage_tol', 'fire_tol', 'minimum_temperature_tol'
 ]
 Products = [
-	'allelochemicals', 'food_prod', 'raw_materials_prod', 'medicinals_prod', 'biochemical_material_prod', 'cultural_and_amenity_prod', 'mineral_nutrients_prod',
+	'allelochemicals', 'food_prod', 'animal_food', 'raw_materials_prod', 'medicinals_prod', 'biochemical_material_prod', 'cultural_and_amenity_prod', 'mineral_nutrients_prod',
 ]
 
 PropertyToClassName={
@@ -135,6 +143,7 @@ PropertyToClassName={
 	### Products ###
 	'allelochemicals': 'fixthis', 
 	'food_prod' : 'FoodProd', 
+	'animal_food' : 'AnimalFood',
 	'raw_materials_prod': 'RawMaterialsProd', 
 	'medicinals_prod': 'MedicinalsProd', 
 	'biochemical_material_prod' : 'BiochemicalMaterialProd', 
@@ -142,26 +151,54 @@ PropertyToClassName={
 	'mineral_nutrients_prod' : 'MineralNutrientsProd',
 	}
 
-def reload_attribute_vals_view(request, className=None, default=None):
-	response_data = {'dropdownvals':[], 'defaultIds':[]}
-	defaults = default.split()
+def getCharacteristics(request):
+	return HttpResponse(json.dumps(EmptyPlant['Characteristics']), content_type="application/json")
 
-	if "insect" in className.lower():
-		insects = Insects.objects.all()
-		for i in range(0, len(insects)):
-			if insects[i].value in defaults: ## THE WAY THIS IS EVALUATED NEEDS TO BE CHANGED EX. AMBROSIA BEETLE
-				response_data['defaultIds'].append(insects[i].value)
-			p = dict(id=insects[i].id, text = insects[i].value)
+def getProducts(request):
+	return HttpResponse(json.dumps(EmptyPlant['Products']), content_type="application/json")
+
+def getTolerances(request):
+	return HttpResponse(json.dumps(EmptyPlant['Tolerances']), content_type="application/json")
+
+def getNeeds(request):
+	return HttpResponse(json.dumps(EmptyPlant['Needs']), content_type="application/json")
+
+def getBehaviors(request):
+	return HttpResponse(json.dumps(EmptyPlant['Behaviors']), content_type="application/json")
+
+def reload_attribute_vals_view(request, className=None):
+	response_data = {'dropdownvals':[], 'defaultIds':[]}
+	defaults = request.GET.getlist('defaultVals[]')
+	print(defaults)
+	if "insect" in className.lower() or "animal" in className.lower():
+		if "insect" in className.lower():
+			choices = Insects.objects.all()
+		else:
+			choices = Animals.objects.all()
+		for i in range(0, len(choices)):
+			if choices[i].value in defaults:
+				response_data['defaultIds'].append(choices[i].id)
+			p = dict(id=choices[i].id, text = choices[i].value)
 			response_data['dropdownvals'].append(p)
 		return HttpResponse(json.dumps(response_data), content_type="application/json")
-	elif "animal" in className.lower():
-		animals = Animals.objects.all()
-		for i in range(0, len(animals)):
-			if animals[i].value in defaults: ## THE WAY THIS IS EVALUATED NEEDS TO BE CHANGED EX. AMBROSIA BEETLE
-				response_data['defaultIds'].append(animals[i].value)
-			p = dict(id=animals[i].id, text = animals[i].value)
-			response_data['dropdownvals'].append(p)
-		return HttpResponse(json.dumps(response_data), content_type="application/json")
+
+
+	# if "insect" in className.lower():
+	# 	insects = Insects.objects.all()
+	# 	for i in range(0, len(insects)):
+	# 		if insects[i].value in defaults: ## THE WAY THIS IS EVALUATED NEEDS TO BE CHANGED EX. AMBROSIA BEETLE
+	# 			response_data['defaultIds'].append(insects[i].id)
+	# 		p = dict(id=insects[i].id, text = insects[i].value)
+	# 		response_data['dropdownvals'].append(p)
+	# 	return HttpResponse(json.dumps(response_data), content_type="application/json")
+	# elif "animal" in className.lower():
+	# 	animals = Animals.objects.all()
+	# 	for i in range(0, len(animals)):
+	# 		if animals[i].value in defaults: ## THE WAY THIS IS EVALUATED NEEDS TO BE CHANGED EX. AMBROSIA BEETLE
+	# 			response_data['defaultIds'].append(animals[i].id)
+	# 		p = dict(id=animals[i].id, text = animals[i].value)
+	# 		response_data['dropdownvals'].append(p)
+	# 	return HttpResponse(json.dumps(response_data), content_type="application/json")
 	else:
 		cls = globals()[className]
 		cls_model = apps.get_model('frontend', className)
@@ -186,6 +223,28 @@ def addImg(request):
 		response_data = "get"
 
 	return HttpResponse(json.dumps(response_data), content_type="application/json")
+
+def removeAttribute(request):
+	if request.method == 'POST':
+		plantId = int(request.POST['plant_id'])
+		transaction_id = int(request.POST['transaction_id'])
+		prop = request.POST['property_name']
+
+		if transaction_id == 0:
+			#transaction = Transactions.objects.create(timestamp=datetime.now(), users_id=1, plants_id=plantId, transaction_type=action_type, ignore=False)
+			transaction = Transactions.objects.create(timestamp=datetime.now(), users_id=request.user.id, plants_id=plantId, transaction_type='UPDATE', ignore=False)
+			transaction.save()
+			response_data = transaction.id
+		else:
+			transaction = Transactions.objects.get(id=transaction_id)
+			response_data = transaction_id
+
+		actions = []
+		actions.append(Actions(transactions=transaction , action_type='UPDATE', property=prop, value=None))
+		Actions.objects.bulk_create(actions)
+		return HttpResponse(json.dumps(response_data))
+	else:
+		return HttpResponse(json.dumps("GET"))
 
 def updateNames(request):
 	if request.method == 'POST': 
@@ -239,7 +298,6 @@ def updateText(request, transaction_id, action_type):
 		form = UpdateAttributeForm(request.POST, class_name='Plant')
 
 		if form.is_valid():
-			print("Update Text is valid")
 			property = request.POST['property_name']
 			value = request.POST['text']
 			plantId = request.POST['plant_id']
@@ -255,7 +313,6 @@ def updateText(request, transaction_id, action_type):
 			Actions.objects.bulk_create(actions)
 			response_data = transaction.id
 		else:
-			print("~~INVALID FORM~~")
 			response_data = int(transaction_id)
 		return HttpResponse(json.dumps(response_data), content_type="application/json")
 
@@ -267,7 +324,6 @@ def updateSelect(request, transaction_id, action_type):
 		#form = UpdateAttributeForm(request.POST, class_name='Plant')
 		
 		if form.is_valid():
-			print("Update select is valid")
 			property = request.POST['property_name']
 			value = request.POST['select']
 			plantId = request.POST['plant_id']
@@ -283,19 +339,15 @@ def updateSelect(request, transaction_id, action_type):
 			Actions.objects.bulk_create(actions)
 			response_data = transaction.id
 		else:
-			print("~~INVALID FORM~~")
 			response_data = int(transaction_id)
 		return HttpResponse(json.dumps(response_data))
 
 def updateMulti(request, transaction_id, action_type):
-	
 	if request.method == 'POST':
-		#form = UpdateMultiForm(request.POST)
 		cls_name = request.POST['class_name']
 		form = UpdateAttributeForm(request.POST, class_name=cls_name)
-		#pdb.set_trace()
+
 		if form.is_valid():
-			print("Update multi is valid")
 			property = request.POST['property_name']
 			values = dict(request.POST)['multi']
 			plantId = request.POST['plant_id']
@@ -316,9 +368,9 @@ def updateMulti(request, transaction_id, action_type):
 
 			response_data = transaction.id
 		else:
-			print("~~INVALID FORM~~")
 			response_data = int(transaction_id)
 		return HttpResponse(json.dumps(response_data))
+
 
 #Plant.imageurl_set
 
@@ -358,7 +410,6 @@ def editPlant(request, plantId=None):
 			result['About'].append(field)
 
 	context = {
-		# 'isNew': 1,
 		'userId': request.user.id,
 		'transactionId' : 0,
 		'result': result,
@@ -371,10 +422,6 @@ def editPlant(request, plantId=None):
 		'family_common_name' : plant.family_common_name,
 		'endemic_status' : plant.get_endemic_status,
 		'images': ImageURL.objects.filter(plants_id=plantId),
-		'searchForThis': {},#json.dumps(populateSearchDropDown()),
-		# 'updateTextForm': UpdateTextForm(),
-		# 'updateSelectForm': UpdateSelectForm(class_name='Plant'),
-		# 'updateMulitForm': UpdateMultiForm(),
 		'updatePlantNamesForm' : UpdatePlantNamesForm(),
 		'updateAttributeForm' : UpdateAttributeForm(class_name='Plant'),
 	}
@@ -388,8 +435,6 @@ def addPlant(request):
 		if 'add' in request.POST and addPlantForm.is_valid():
 			nameArray = str(request.POST["latinName"]).split()
 			commonName = request.POST["commonName"]
-
-			# IF EITHER OF THE ABOVE ARE "NONE" RETURN ERRORS!!!!!!! -- the UI doesnt allow ether to be none
 
 			genus = None
 			species = None
@@ -417,43 +462,6 @@ def addPlant(request):
 				actions.append(Actions(transactions=transaction , action_type='INSERT', property='common_name', value=commonName))
 			Actions.objects.bulk_create(actions)
 
-			# plant = Plant.objects.create()
-			# result = {'Characteristics':[], 'Needs':[], 'Tolerances':[], 'Behaviors':[], 'Products':[], 'About':[]}
-			# for field in plant.get_all_fields:
-			# 	if field['name'] is 'region':
-			# 		if plant.get_region() is None:
-			# 			height = dict(name='height', field_type='other', value=None, label='height', class_name = 'FIXME')
-			# 			spread = dict(name='spread', field_type='other', value=None, label='spread', class_name = 'FIXME')
-			# 			root_depth = dict(name='root_depth', field_type='other', value=None, label='root depth', class_name = 'FIXME')
-			# 		else:
-			# 			height = dict(name='height', field_type='other', value=plant.get_region()['height'], label='height', class_name = 'FIXME')
-			# 			spread = dict(name='spread', field_type='other', value=plant.get_region()['spread'], label='spread', class_name = 'FIXME')
-			# 			root_depth = dict(name='root_depth', field_type='other', value=plant.get_region()['root_depth'], label='root depth', class_name = 'FIXME')
-			# 		result['Characteristics'].append(height)
-			# 		result['Characteristics'].append(spread)
-			# 		result['Characteristics'].append(root_depth)
-			# 	if field['name'] in Characteristics:
-			# 		field.update({'class_name':PropertyToClassName[field['name']]})
-			# 		result['Characteristics'].append(field)
-			# 	elif field['name'] in Needs:
-			# 		field.update({'class_name':PropertyToClassName[field['name']]})
-			# 		result['Needs'].append(field)
-			# 	elif field['name'] in Tolerances:
-			# 		field.update({'class_name':PropertyToClassName[field['name']]})
-			# 		result['Tolerances'].append(field)
-			# 	elif field['name'] in Products:
-			# 		field.update({'class_name':PropertyToClassName[field['name']]})
-			# 		result['Products'].append(field)
-			# 	elif field['name'] in Behaviors:
-			# 		field.update({'class_name':PropertyToClassName[field['name']]})
-			# 		result['Behaviors'].append(field)
-			# 	else:
-			# 		result['About'].append(field)
-
-
-
-			# pdb.set_trace()
-
 			context = {
 				'newPlant':{
 					'genus': genus,
@@ -472,21 +480,11 @@ def addPlant(request):
 				'family' : None,
 				'family_common_name' : None,
 				'endemic_status' : None,
-				#'images': ImageURL.objects.get(plant.id=4121),
-				'searchForThis': {},#json.dumps(populateSearchDropDown()),
-				# 'updateTextForm': UpdateTextForm(),
-				# 'updateSelectForm': UpdateSelectForm(class_name='Plant'),
-				# 'updateMulitForm': UpdateMultiForm(),
 				'updatePlantNamesForm':UpdatePlantNamesForm(),
 				'updateAttributeForm' : UpdateAttributeForm(class_name='Plant'),
 			}
 			return render(request, 'frontend/editplant.html', context)
 
-from django.template.defaulttags import register
-
-@register.filter
-def get_item(dictionary, key):
-	return dictionary.get(key)
 
 def viewPlants(request):
 	if request.method == 'GET':
@@ -513,66 +511,93 @@ def viewPlants(request):
 		context = {
 			'addPlantForm': AddPlantForm(),
 			'plants':plants,
-			'images': images,
-			'searchForThis': [],#json.dumps(populateSearchDropDown()),
+			#'queryResultSet' : plant_list,
+			'images': images
 		}
 		return render(request, 'frontend/cardview.html', context)
 
-# def populateSearchDropDown():
-# 	choices = {'genus':[], 'species':[], 'variety':[]}
-	
-# 	plants = Plant.objects
-# 	plant_list = plants.all()
-
-# 	genus_list = plants.distinct('genus')
-# 	for plant in genus_list: 
-# 		if plant.genus:
-# 			p = dict(id=plant.id, text=plant.genus, field='genus')
-# 			choices['genus'].append(p)
-
-# 	species_list = plants.distinct('species')
-# 	for plant in species_list: 
-# 		if plant.species:
-# 			p = dict(id=plant.id, text=plant.species, field='species')
-# 			choices['species'].append(p)
-
-# 	variety_list = plants.distinct('variety')
-# 	for plant in variety_list: 
-# 		if plant.variety:
-# 			p = dict(id=plant.id, text=plant.variety, field='variety')
-# 			choices['variety'].append(p)
-	
-# 	return choices
-
-from itertools import chain
+def getFilterResults(field, field_type, value):
+	if field_type == "other":
+		q = Q(**{"%s" % field: value})
+	elif field_type == "many_to_many":
+		q = Q(**{"%s__value__icontains" % field: value})
+	else: 
+		q = Q(**{"%s__value__icontains" % field: value})
+	return q
 
 
-def search(request):
-	searchString = request.POST['searchVal']
+def filter(request):
+	if request.method == 'GET':
+		#account for multi-value filters?
+		fieldLabel = request.GET['filter_field_label']
+		field = request.GET['filter_field']
+		field_type = request.GET['filter_field_type']
+		value = request.GET['filter_value']
+
+		if field == 'height' or field == 'spread' or field == 'root_depth':
+			q = Q(**{"plantregion__%s" % field : value})
+		else:
+			q = getFilterResults(field, field_type, value)
+
+		plant_list = Plant.objects.filter(q)		
+
+		paginator = Paginator(plant_list, 35)
+		page = request.GET.get('page')
+
+		try:
+			plants = paginator.page(page)
+		except PageNotAnInteger:
+			plants = paginator.page(1)
+		except EmptyPage:
+			plants = paginator.page(paginator.num_pages)
+		iterableImages = ImageURL.objects.all()
+		images = {}
+		plantIdsAlreadyUsed = []
+		for img in iterableImages:
+			if img.plants.id not in plantIdsAlreadyUsed:
+				images[img.plants.id] = img.value
+				plantIdsAlreadyUsed.append(img.plants.id)
+
+
+		context = {
+			'addPlantForm': AddPlantForm(),
+			'plants':plants,
+			'images': images,
+			'filter_by': fieldLabel + " | " + value
+		}
+		return render(request, 'frontend/cardview.html', context)
+
+
+#from itertools import chain
+def search(request, searchString):
+	print(searchString)
+		
 	plants = Plant.objects
-	#plant_list = Plant.objects.all()
 
+	# layer_results = Plant.objects.filter(layer__in=Layer.objects.filter(value__icontains=searchString))
+	# food_results = Plant.objects.filter(food_prod__in=FoodProd.objects.filter(value__icontains=searchString))
+	# rawmat_results = Plant.objects.filter(raw_materials_prod__in=RawMaterialsProd.objects.filter(value__icontains=searchString))
+	# med_results = Plant.objects.filter(medicinals_prod__in=MedicinalsProd.objects.filter(value__icontains=searchString))
+	# biomed_results = Plant.objects.filter(biochemical_material_prod__in=BiochemicalMaterialProd.objects.filter(value__icontains=searchString))
+	# # water_results = Plant.objects.filter(water_needs__in=WaterNeeds.objects.filter(value__icontains=searchString))
+	# # sun_results = Plant.objects.filter(sun_needs__in=SunNeeds.objects.filter(value__icontains=searchString))
+	# # nutrients_results = Plant.objects.filter(fertility_needs__in=NutrientRequirements.objects.filter(value__icontains=searchString))
+	# serotiny_results = Plant.objects.filter(serotiny__in=Serotiny.objects.filter(value__icontains=searchString))
+	# erosion_results = Plant.objects.filter(erosion_control__in=ErosionControl.objects.filter(value__icontains=searchString))
+	# insect_attract_results = Plant.objects.filter(plants_insect_attractor__in=Insects.objects.filter(value__icontains=searchString))
+	# insect_reg_results = Plant.objects.filter(plants_insect_regulator__in=Insects.objects.filter(value__icontains=searchString))
 
-	layer_results = Plant.objects.filter(layer__in=Layer.objects.filter(value__icontains=searchString))
-	food_results = Plant.objects.filter(food_prod__in=FoodProd.objects.filter(value__icontains=searchString))
-	rawmat_results = Plant.objects.filter(raw_materials_prod__in=RawMaterialsProd.objects.filter(value__icontains=searchString))
-	med_results = Plant.objects.filter(medicinals_prod__in=MedicinalsProd.objects.filter(value__icontains=searchString))
-	biomed_results = Plant.objects.filter(biochemical_material_prod__in=BiochemicalMaterialProd.objects.filter(value__icontains=searchString))
-	# water_results = Plant.objects.filter(water_needs__in=WaterNeeds.objects.filter(value__icontains=searchString))
-	# sun_results = Plant.objects.filter(sun_needs__in=SunNeeds.objects.filter(value__icontains=searchString))
-	# nutrients_results = Plant.objects.filter(fertility_needs__in=NutrientRequirements.objects.filter(value__icontains=searchString))
-	serotiny_results = Plant.objects.filter(serotiny__in=Serotiny.objects.filter(value__icontains=searchString))
-	erosion_results = Plant.objects.filter(erosion_control__in=ErosionControl.objects.filter(value__icontains=searchString))
-	insect_attract_results = Plant.objects.filter(plants_insect_attractor__in=Insects.objects.filter(value__icontains=searchString))
-	insect_reg_results = Plant.objects.filter(plants_insect_regulator__in=Insects.objects.filter(value__icontains=searchString))
-
-	name_matches = Plant.objects.filter(Q(genus__icontains=searchString) | 
+	name_matches = Plant.objects.filter(
+		Q(genus__icontains=searchString) | 
 		Q(species__icontains=searchString) | 
 		Q(variety__icontains=searchString) |
 		Q(common_name__icontains=searchString) |
-		Q(innoculant__icontains=searchString))
+		Q(innoculant__icontains=searchString)
+	)
 	# results_list = list(chain(name_matches, layer_results, food_results, rawmat_results, med_results, biomed_results, water_results, sun_results, nutrients_results, serotiny_results, erosion_results, insect_attract_results, insect_reg_results))
-	results_list = list(chain(name_matches, layer_results, food_results, rawmat_results, med_results, biomed_results, serotiny_results, erosion_results, insect_attract_results, insect_reg_results))
+	# results_list = list(chain(name_matches, layer_results, food_results, rawmat_results, med_results, biomed_results, serotiny_results, erosion_results, insect_attract_results, insect_reg_results))
+
+	results_list = list(name_matches)
 
 	paginator = Paginator(results_list, 35)
 	page = request.GET.get('page')
@@ -594,7 +619,7 @@ def search(request):
 	context = {
 		'addPlantForm': AddPlantForm(),
 		'plants':plants,
-		'images': images,
-		'searchForThis': [],#json.dumps(populateSearchDropDown()),
+		'images': images
 	}
 	return render(request, 'frontend/cardview.html', context)
+
